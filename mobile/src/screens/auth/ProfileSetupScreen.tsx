@@ -12,13 +12,13 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import * as api from '../../services/api';
 import { Prompt } from '../../types';
 import { LIMITS, IMAGE } from '../../config/constants';
 
-type ProfileSetupNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ProfileSetup'>;
+type ProfileSetupNavigationProp = StackNavigationProp<RootStackParamList, 'ProfileSetup'>;
 
 const ProfileSetupScreen = () => {
   const navigation = useNavigation<ProfileSetupNavigationProp>();

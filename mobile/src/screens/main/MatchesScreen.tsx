@@ -11,12 +11,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { Match } from '../../types';
 import * as api from '../../services/api';
 
-type MatchesNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Main'>;
+type MatchesNavigationProp = StackNavigationProp<RootStackParamList, 'Main'>;
 
 const MatchesScreen = () => {
   const [matches, setMatches] = useState<Match[]>([]);

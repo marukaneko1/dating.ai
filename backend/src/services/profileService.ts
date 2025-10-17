@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { UpdateProfileDto, CreatePromptAnswerDto } from '../types';
+import { LIMITS } from '../config/constants';
 
 const prisma = new PrismaClient();
 
@@ -70,8 +71,8 @@ export const addPhoto = async (
     where: { profileId: profile.id },
   });
 
-  if (photoCount >= 6) {
-    throw new Error('Maximum 6 photos allowed');
+  if (photoCount >= LIMITS.MAX_PHOTOS) {
+    throw new Error(`Maximum ${LIMITS.MAX_PHOTOS} photos allowed`);
   }
 
   return prisma.photo.create({
@@ -125,8 +126,8 @@ export const addPromptAnswer = async (
     where: { profileId: profile.id },
   });
 
-  if (answerCount >= 3) {
-    throw new Error('Maximum 3 prompt answers allowed');
+  if (answerCount >= LIMITS.MAX_PROMPTS) {
+    throw new Error(`Maximum ${LIMITS.MAX_PROMPTS} prompt answers allowed`);
   }
 
   return prisma.promptAnswer.create({

@@ -15,6 +15,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../contexts/AuthContext';
 import { Profile } from '../../types';
 import * as api from '../../services/api';
+import { LIMITS, IMAGE } from '../../config/constants';
 
 const ProfileScreen = () => {
   const { user, logout, refreshUser } = useAuth();
@@ -73,16 +74,16 @@ const ProfileScreen = () => {
   const handlePhotoUpload = async () => {
     if (!profile) return;
 
-    if (profile.photos.length >= 6) {
-      Alert.alert('Maximum photos', 'You can only have 6 photos');
+    if (profile.photos.length >= LIMITS.MAX_PHOTOS) {
+      Alert.alert('Maximum photos', `You can only have ${LIMITS.MAX_PHOTOS} photos`);
       return;
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: [3, 4],
-      quality: 0.8,
+      aspect: IMAGE.ASPECT_RATIO,
+      quality: IMAGE.QUALITY,
     });
 
     if (!result.canceled) {

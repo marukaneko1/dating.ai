@@ -1,9 +1,10 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { UserPayload } from '../types';
+import { AUTH } from '../config/constants';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-this';
-const SALT_ROUNDS = 10;
+const SALT_ROUNDS = AUTH.BCRYPT_ROUNDS;
 
 export const hashPassword = async (password: string): Promise<string> => {
   return bcrypt.hash(password, SALT_ROUNDS);
@@ -17,7 +18,7 @@ export const comparePassword = async (
 };
 
 export const generateToken = (payload: UserPayload): string => {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: AUTH.TOKEN_EXPIRATION });
 };
 
 export const verifyToken = (token: string): UserPayload => {

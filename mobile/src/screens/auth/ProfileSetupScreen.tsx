@@ -16,6 +16,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import * as api from '../../services/api';
 import { Prompt } from '../../types';
+import { LIMITS, IMAGE } from '../../config/constants';
 
 type ProfileSetupNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ProfileSetup'>;
 
@@ -53,16 +54,16 @@ const ProfileSetupScreen = () => {
   };
 
   const pickImage = async () => {
-    if (photos.length >= 6) {
-      Alert.alert('Maximum photos', 'You can only upload 6 photos');
+    if (photos.length >= LIMITS.MAX_PHOTOS) {
+      Alert.alert('Maximum photos', `You can only upload ${LIMITS.MAX_PHOTOS} photos`);
       return;
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: [3, 4],
-      quality: 0.8,
+      aspect: IMAGE.ASPECT_RATIO,
+      quality: IMAGE.QUALITY,
     });
 
     if (!result.canceled) {
@@ -75,7 +76,7 @@ const ProfileSetupScreen = () => {
   };
 
   const addPrompt = (prompt: Prompt) => {
-    if (selectedPrompts.length < 3) {
+    if (selectedPrompts.length < LIMITS.MAX_PROMPTS) {
       setSelectedPrompts([...selectedPrompts, { prompt, answer: '' }]);
     }
   };
@@ -123,8 +124,8 @@ const ProfileSetupScreen = () => {
     (p) => !selectedPrompts.find((sp) => sp.prompt.id === p.id)
   );
 
-  const canContinueStep1 = photos.length >= 2;
-  const canContinueStep2 = selectedPrompts.length === 3 && 
+  const canContinueStep1 = photos.length >= LIMITS.MIN_PHOTOS;
+  const canContinueStep2 = selectedPrompts.length === LIMITS.MAX_PROMPTS && 
     selectedPrompts.every((sp) => sp.answer.trim().length > 0);
 
   return (

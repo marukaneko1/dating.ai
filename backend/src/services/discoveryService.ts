@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { calculateDistance } from '../utils/distance';
+import { DISCOVERY } from '../config/constants';
 
 const prisma = new PrismaClient();
 
@@ -59,7 +60,7 @@ export const getNextProfile = async (userId: string) => {
         orderBy: { order: 'asc' },
       },
     },
-    take: 50, // Get a batch to filter by distance
+    take: DISCOVERY.BATCH_SIZE,
   });
 
   // Filter by distance if coordinates are available
@@ -86,7 +87,7 @@ export const getNextProfile = async (userId: string) => {
   }
 
   // Randomize to avoid always showing the same profiles first
-  const randomIndex = Math.floor(Math.random() * Math.min(candidates.length, 10));
+  const randomIndex = Math.floor(Math.random() * Math.min(candidates.length, DISCOVERY.RANDOMIZE_TOP));
   return candidates[randomIndex];
 };
 

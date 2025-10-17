@@ -14,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../contexts/AuthContext';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../navigation/AppNavigator';
+import { GENDER_OPTIONS, INTERESTED_IN_OPTIONS, PREFERENCES } from '../../config/constants';
 
 type RegisterScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Register'>;
 
@@ -62,8 +63,8 @@ const RegisterScreen = ({ navigation }: Props) => {
     }
 
     const age = parseInt(formData.age);
-    if (isNaN(age) || age < 18 || age > 100) {
-      Alert.alert('Error', 'Please enter a valid age (18-100)');
+    if (isNaN(age) || age < PREFERENCES.MIN_AGE || age > PREFERENCES.MAX_AGE) {
+      Alert.alert('Error', `Please enter a valid age (${PREFERENCES.MIN_AGE}-${PREFERENCES.MAX_AGE})`);
       return;
     }
 
@@ -80,7 +81,7 @@ const RegisterScreen = ({ navigation }: Props) => {
     }
   };
 
-  const genders = ['male', 'female', 'non-binary', 'other'];
+  const genders = GENDER_OPTIONS;
 
   return (
     <KeyboardAvoidingView
@@ -158,7 +159,7 @@ const RegisterScreen = ({ navigation }: Props) => {
 
               <Text style={styles.label}>Interested in</Text>
               <View style={styles.optionsRow}>
-                {['male', 'female', 'non-binary'].map((gender) => (
+                {INTERESTED_IN_OPTIONS.map((gender) => (
                   <TouchableOpacity
                     key={gender}
                     style={[

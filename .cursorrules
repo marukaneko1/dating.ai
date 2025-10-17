@@ -1,0 +1,38 @@
+# Project-specific cursor rules for Hinge MVP
+
+## Tech Stack
+- Backend: Node.js, Express, TypeScript, Prisma, PostgreSQL, Socket.io
+- Frontend: React 18, TypeScript, Vite, Tailwind CSS, React Router v6
+
+## Code Style
+- Use TypeScript strict mode
+- Prefer async/await over promises
+- Use functional components in React
+- Use arrow functions for consistency
+- Follow REST conventions for API endpoints
+
+## File Organization
+- Backend: controllers, services, middleware, routes, utils
+- Frontend: pages, components, contexts, services, types
+- Keep files focused and under 300 lines when possible
+
+## Database
+- Use Prisma for all database operations
+- Never write raw SQL
+- Always create migrations for schema changes
+- Use transactions for multi-step operations
+
+## Security
+- Always validate user input
+- Check authorization before operations
+- Hash passwords with bcrypt
+- Use JWT for authentication
+- Never expose sensitive data in responses
+
+## Best Practices
+- Handle errors gracefully
+- Add loading states
+- Provide user feedback for actions
+- Keep components modular and reusable
+- Use TypeScript types, avoid 'any'
+

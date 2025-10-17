@@ -1,0 +1,148 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profile        Profile?
+  likesSent      Like[]    @relation("LikesSent")
+  likesReceived  Like[]    @relation("LikesReceived")
+  matchesUser1   Match[]   @relation("MatchUser1")
+  matchesUser2   Match[]   @relation("MatchUser2")
+  messagesSent   Message[] @relation("MessagesSent")
+}
+
+model Profile {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Basic Info
+  firstName        String
+  age              Int
+  bio              String?
+  location         String?
+  gender           String // "male", "female", "non-binary", "other"
+  
+  // Preferences
+  interestedIn     String[] // ["male", "female", "non-binary"]
+  minAge           Int      @default(18)
+  maxAge           Int      @default(99)
+  maxDistance      Int      @default(50) // in miles
+  
+  // Location (for distance calculation)
+  latitude         Float?
+  longitude        Float?
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  photos           Photo[]
+  promptAnswers    PromptAnswer[]
+}
+
+model Photo {
+  id        String   @id @default(uuid())
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  url       String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  likes     Like[]
+}
+
+model Prompt {
+  id       String   @id @default(uuid())
+  text     String   @unique
+  category String? // "fun", "deep", "lifestyle", etc.
+  active   Boolean  @default(true)
+
+  answers  PromptAnswer[]
+}
+
+model PromptAnswer {
+  id        String   @id @default(uuid())
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  promptId  String
+  prompt    Prompt   @relation(fields: [promptId], references: [id])
+  answer    String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  likes     Like[]
+
+  @@unique([profileId, order])
+}
+
+enum LikeType {
+  PROFILE
+  PHOTO
+  PROMPT
+}
+
+model Like {
+  id             String   @id @default(uuid())
+  fromUserId     String
+  fromUser       User     @relation("LikesSent", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUserId       String
+  toUser         User     @relation("LikesReceived", fields: [toUserId], references: [id], onDelete: Cascade)
+  
+  type           LikeType
+  comment        String?  // Optional comment on the like
+  
+  // What was liked (only one should be set based on type)
+  photoId        String?
+  photo          Photo?   @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  promptAnswerId String?
+  promptAnswer   PromptAnswer? @relation(fields: [promptAnswerId], references: [id], onDelete: Cascade)
+  
+  createdAt      DateTime @default(now())
+
+  @@unique([fromUserId, toUserId, type, photoId, promptAnswerId])
+  @@index([toUserId, createdAt])
+  @@index([fromUserId, createdAt])
+}
+
+model Match {
+  id        String   @id @default(uuid())
+  user1Id   String
+  user1     User     @relation("MatchUser1", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2Id   String
+  user2     User     @relation("MatchUser2", fields: [user2Id], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  messages  Message[]
+
+  @@unique([user1Id, user2Id])
+  @@index([user1Id])
+  @@index([user2Id])
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  matchId    String
+  match      Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  senderId   String
+  sender     User     @relation("MessagesSent", fields: [senderId], references: [id], onDelete: Cascade)
+  content    String
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([matchId, createdAt])
+}
+

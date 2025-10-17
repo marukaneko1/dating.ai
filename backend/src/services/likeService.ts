@@ -15,15 +15,13 @@ export const createLike = async (userId: string, data: CreateLikeDto) => {
   }
 
   // Check if already liked
-  const existingLike = await prisma.like.findUnique({
+  const existingLike = await prisma.like.findFirst({
     where: {
-      fromUserId_toUserId_type_photoId_promptAnswerId: {
-        fromUserId: userId,
-        toUserId,
-        type,
-        photoId: (photoId !== undefined ? photoId : null) as string | null,
-        promptAnswerId: (promptAnswerId !== undefined ? promptAnswerId : null) as string | null,
-      },
+      fromUserId: userId,
+      toUserId,
+      type,
+      photoId: photoId || null,
+      promptAnswerId: promptAnswerId || null,
     },
   });
 

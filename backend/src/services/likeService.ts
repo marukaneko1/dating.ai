@@ -21,8 +21,8 @@ export const createLike = async (userId: string, data: CreateLikeDto) => {
         fromUserId: userId,
         toUserId,
         type,
-        photoId: photoId ?? null,
-        promptAnswerId: promptAnswerId ?? null,
+        photoId: photoId !== undefined ? photoId : null,
+        promptAnswerId: promptAnswerId !== undefined ? promptAnswerId : null,
       },
     },
   });

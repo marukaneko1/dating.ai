@@ -22,7 +22,36 @@ const LikesScreen = () => {
   const navigation = useNavigation();
 
   useEffect(() => {
-    loadLikes();
+    let mounted = true;
+
+    const loadInitialLikes = async () => {
+      setLoading(true);
+      try {
+        const [sent, received] = await Promise.all([
+          api.getSentLikes(),
+          api.getReceivedLikes(),
+        ]);
+        if (mounted) {
+          setSentLikes(sent);
+          setReceivedLikes(received);
+        }
+      } catch (error) {
+        console.error('Failed to load likes', error);
+        if (mounted) {
+          Alert.alert('Error', 'Failed to load likes');
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadInitialLikes();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const loadLikes = async () => {

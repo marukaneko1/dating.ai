@@ -24,7 +24,32 @@ const MatchesScreen = () => {
   const navigation = useNavigation<MatchesNavigationProp>();
 
   useEffect(() => {
-    loadMatches();
+    let mounted = true;
+
+    const loadInitialMatches = async () => {
+      setLoading(true);
+      try {
+        const data = await api.getMatches();
+        if (mounted) {
+          setMatches(data);
+        }
+      } catch (error) {
+        console.error('Failed to load matches', error);
+        if (mounted) {
+          Alert.alert('Error', 'Failed to load matches');
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadInitialMatches();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   useEffect(() => {

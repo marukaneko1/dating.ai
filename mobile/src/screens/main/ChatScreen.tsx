@@ -29,21 +29,48 @@ const ChatScreen = () => {
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {
-    loadMessages();
+    let mounted = true;
+
+    const loadInitialMessages = async () => {
+      setLoading(true);
+      try {
+        const data = await api.getMessages(matchId);
+        if (mounted) {
+          setMessages(data);
+          await api.markMessagesAsRead(matchId);
+        }
+      } catch (error) {
+        console.error('Failed to load messages', error);
+        if (mounted) {
+          Alert.alert('Error', 'Failed to load messages');
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadInitialMessages();
 
     const socket = getSocket();
     if (socket) {
       socket.emit('joinMatch', matchId);
 
       socket.on('newMessage', (message: Message) => {
-        if (message.matchId === matchId) {
+        if (message.matchId === matchId && mounted) {
           setMessages((prev) => [...prev, message]);
         }
       });
 
       return () => {
+        mounted = false;
         socket.emit('leaveMatch', matchId);
         socket.off('newMessage');
+      };
+    } else {
+      return () => {
+        mounted = false;
       };
     }
   }, [matchId]);

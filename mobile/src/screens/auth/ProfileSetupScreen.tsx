@@ -33,8 +33,21 @@ const ProfileSetupScreen = () => {
   const [location, setLocation] = useState('');
 
   useEffect(() => {
-    loadPrompts();
-    requestPermissions();
+    let mounted = true;
+
+    const initialize = async () => {
+      await requestPermissions();
+      const data = await api.getPrompts();
+      if (mounted) {
+        setPrompts(data);
+      }
+    };
+
+    initialize().catch(console.error);
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const requestPermissions = async () => {

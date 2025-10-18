@@ -30,7 +30,29 @@ const DiscoverScreen = () => {
   const [comment, setComment] = useState('');
 
   useEffect(() => {
-    loadNextProfile();
+    let mounted = true;
+
+    const loadInitialProfile = async () => {
+      try {
+        const nextProfile = await api.getNextProfile();
+        if (mounted) {
+          setProfile(nextProfile);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Failed to load profile', error);
+        if (mounted) {
+          Alert.alert('Error', 'Failed to load profiles');
+          setLoading(false);
+        }
+      }
+    };
+
+    loadInitialProfile();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const loadNextProfile = async () => {

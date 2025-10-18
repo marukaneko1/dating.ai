@@ -33,7 +33,41 @@ const ProfileScreen = () => {
   });
 
   useEffect(() => {
-    loadProfile();
+    let mounted = true;
+
+    const loadInitialProfile = async () => {
+      setLoading(true);
+      try {
+        const data = await api.getProfile();
+        if (mounted) {
+          setProfile(data);
+          setFormData({
+            firstName: data.firstName,
+            age: data.age,
+            bio: data.bio || '',
+            location: data.location || '',
+            minAge: data.minAge,
+            maxAge: data.maxAge,
+            maxDistance: data.maxDistance,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load profile', error);
+        if (mounted) {
+          Alert.alert('Error', 'Failed to load profile');
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadInitialProfile();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const loadProfile = async () => {

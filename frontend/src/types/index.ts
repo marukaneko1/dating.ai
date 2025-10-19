@@ -1,7 +1,8 @@
 export interface User {
   id: string;
   email: string;
-  profile: Profile;
+  isAdmin: boolean;
+  profile: Profile | null;
 }
 
 export interface Profile {

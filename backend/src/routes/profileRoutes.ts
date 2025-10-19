@@ -20,5 +20,11 @@ router.post('/prompts', authenticate, profileController.addPromptAnswer);
 router.put('/prompts/:id', authenticate, profileController.updatePromptAnswer);
 router.delete('/prompts/:id', authenticate, profileController.deletePromptAnswer);
 
+// AI insight endpoint
+router.post('/generate-insight', authenticate, profileController.generateAIInsight);
+
+// Reset user profile endpoint
+router.post('/reset-user', authenticate, profileController.resetUserProfile);
+
 export default router;
 

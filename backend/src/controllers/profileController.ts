@@ -86,3 +86,23 @@ export const deletePromptAnswer = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const generateAIInsight = async (req: AuthRequest, res: Response) => {
+  try {
+    const profile = await profileService.generateAIInsight(req.userId!);
+    res.json(profile);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to generate insight';
+    res.status(500).json({ error: message });
+  }
+};
+
+export const resetUserProfile = async (req: AuthRequest, res: Response) => {
+  try {
+    await profileService.resetUserProfile(req.userId!);
+    res.json({ message: 'User profile reset' });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Reset failed';
+    res.status(400).json({ error: message });
+  }
+};
+

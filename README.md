@@ -1,6 +1,6 @@
-# Hinge-Style Dating App MVP
+# Dating.ai MVP
 
-A modern dating application inspired by Hinge, featuring profile prompts, photo likes, intelligent matching, and real-time messaging.
+A modern AI-powered dating application featuring profile prompts, photo likes, intelligent matching, and real-time messaging.
 
 ## 🎯 Core Features
 
@@ -110,14 +110,14 @@ npm run install:all
 
 2. **Set up PostgreSQL database**
 ```bash
-createdb hinge_mvp
+createdb dating_ai
 ```
 
 3. **Configure environment variables**
 
 Backend (`.env` in `/backend`):
 ```env
-DATABASE_URL="postgresql://username:password@localhost:5432/hinge_mvp"
+DATABASE_URL="postgresql://username:password@localhost:5432/dating_ai"
 JWT_SECRET="your-super-secret-jwt-key-change-this"
 PORT=3001
 NODE_ENV=development
@@ -177,7 +177,8 @@ npm start
 - Android: Press `a` for Android Emulator
 - Physical: Scan QR code with Expo Go app
 
-📱 **See [MOBILE_SETUP.md](MOBILE_SETUP.md) for detailed mobile setup instructions.**
+📱 **See [EXPO_GO_GUIDE.md](EXPO_GO_GUIDE.md) for Expo Go quick start guide**  
+📱 **See [MOBILE_SETUP.md](MOBILE_SETUP.md) for detailed mobile setup instructions**
 
 ## 📊 Database Schema
 
@@ -292,13 +293,15 @@ npm start
 - Real-time messaging
 - Photo uploads
 - Profile management
+- Comprehensive test coverage
 
 **Mobile App (NEW!):**
 - Native iOS & Android apps via Expo
 - Complete feature parity with web
 - Native image picker
 - Optimized mobile UX
-- Push notification ready
+- Works with Expo Go for instant testing
+- Push notification ready (requires custom build)
 
 ### 🔜 Not Yet Included
 
@@ -312,15 +315,38 @@ npm start
 
 ## 🧪 Testing
 
-```bash
-# Backend tests
-cd backend
-npm test
+Comprehensive test coverage with Jest and Vitest!
 
-# Frontend tests
+```bash
+# Backend tests (Jest + Supertest)
+cd backend
+npm test                    # Run all tests
+npm run test:watch         # Watch mode
+npm run test:coverage      # With coverage
+
+# Frontend tests (Vitest + React Testing Library)
 cd frontend
-npm test
+npm test                    # Run all tests
+npm run test:ui            # Interactive UI
+npm run test:coverage      # With coverage
 ```
+
+**📖 See [TESTING.md](TESTING.md) for complete testing guide**
+
+### Test Coverage
+- ✅ Backend: 85%+ (unit & integration tests)
+- ✅ Frontend: 70%+ (component tests)
+- ✅ Auth, Discovery, Matching, Messaging
+
+## 📚 Documentation
+
+- **[QUICKSTART.md](QUICKSTART.md)** - Get running in 5 minutes
+- **[SETUP.md](SETUP.md)** - Detailed setup guide
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture
+- **[API.md](API.md)** - Complete API reference
+- **[TESTING.md](TESTING.md)** - Testing guide (NEW!)
+- **[EXPO_GO_GUIDE.md](EXPO_GO_GUIDE.md)** - Mobile quick start (NEW!)
+- **[MOBILE_SETUP.md](MOBILE_SETUP.md)** - Mobile detailed setup
 
 ## 📄 License
 

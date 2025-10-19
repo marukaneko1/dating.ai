@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { UpdateProfileDto, CreatePromptAnswerDto } from '../types';
 import { LIMITS } from '../config/constants';
+import { generateProfileInsight } from './openaiService';
 
 const prisma = new PrismaClient();
 
@@ -32,10 +33,49 @@ export const updateProfile = async (userId: string, data: UpdateProfileDto) => {
     where: { userId },
   });
 
+  // If profile doesn't exist, create it
   if (!profile) {
-    throw new Error('Profile not found');
+    // Get user info for default values
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { profile: true },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Create profile with provided data and defaults
+    return prisma.profile.create({
+      data: {
+        userId,
+        firstName: data.firstName || 'User',
+        age: data.age || 25,
+        gender: data.gender || 'other',
+        interestedIn: data.interestedIn || ['male', 'female', 'non-binary'],
+        bio: data.bio,
+        location: data.location,
+        minAge: data.minAge || 18,
+        maxAge: data.maxAge || 50,
+        maxDistance: data.maxDistance || 50,
+        latitude: data.latitude,
+        longitude: data.longitude,
+      },
+      include: {
+        photos: {
+          orderBy: { order: 'asc' },
+        },
+        promptAnswers: {
+          include: {
+            prompt: true,
+          },
+          orderBy: { order: 'asc' },
+        },
+      },
+    });
   }
 
+  // Update existing profile
   return prisma.profile.update({
     where: { userId },
     data,
@@ -201,3 +241,82 @@ export const deletePromptAnswer = async (userId: string, answerId: string) => {
   });
 };
 
+// Generate AI insight for a profile
+export const generateAIInsight = async (userId: string) => {
+  const profile = await prisma.profile.findUnique({
+    where: { userId },
+    include: {
+      promptAnswers: {
+        include: {
+          prompt: true,
+        },
+        orderBy: { order: 'asc' },
+      },
+    },
+  });
+
+  if (!profile) {
+    throw new Error('Profile not found');
+  }
+
+  // Generate AI insight using OpenAI
+  const aiInsight = await generateProfileInsight({
+    firstName: profile.firstName,
+    age: profile.age,
+    gender: profile.gender,
+    bio: profile.bio || undefined,
+    location: profile.location || undefined,
+    interestedIn: profile.interestedIn,
+    promptAnswers: profile.promptAnswers.map(pa => ({
+      prompt: {
+        text: pa.prompt.text,
+        category: pa.prompt.category || 'other',
+      },
+      answer: pa.answer,
+    })),
+  });
+
+  // Update profile with AI insight
+  return prisma.profile.update({
+    where: { userId },
+    data: { aiInsight },
+    include: {
+      photos: {
+        orderBy: { order: 'asc' },
+      },
+      promptAnswers: {
+        include: {
+          prompt: true,
+        },
+        orderBy: { order: 'asc' },
+      },
+    },
+  });
+};
+
+
+// Reset user profile (delete profile so they start fresh)
+export const resetUserProfile = async (userId: string) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { profile: true },
+  });
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  // Only reset non-admin users
+  if (user.isAdmin) {
+    throw new Error('Cannot reset admin profile this way');
+  }
+
+  if (user.profile) {
+    // Delete profile (cascade will delete photos and prompt answers)
+    await prisma.profile.delete({
+      where: { userId },
+    });
+  }
+
+  return { message: 'User profile reset successfully' };
+};

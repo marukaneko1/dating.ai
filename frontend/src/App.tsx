@@ -3,11 +3,14 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ProfileSetup from './pages/ProfileSetup';
+import Onboarding from './pages/Onboarding';
+import AdminOnboarding from './pages/AdminOnboarding';
 import Discover from './pages/Discover';
 import Matches from './pages/Matches';
 import Chat from './pages/Chat';
 import Profile from './pages/Profile';
 import Likes from './pages/Likes';
+import DevDashboard from './pages/DevDashboard';
 import Layout from './components/Layout';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -21,7 +24,16 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return user ? <>{children}</> : <Navigate to="/login" />;
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+
+  // Check if user has a profile, if not redirect to onboarding
+  if (!user.profile) {
+    return <Navigate to="/onboarding" />;
+  }
+
+  return <>{children}</>;
 }
 
 function AppRoutes() {
@@ -48,11 +60,21 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/onboarding"
+        element={
+          user ? <Onboarding /> : <Navigate to="/login" />
+        }
+      />
+      <Route
+        path="/admin-onboarding"
+        element={
+          user?.isAdmin ? <AdminOnboarding /> : <Navigate to="/login" />
+        }
+      />
+      <Route
         path="/profile-setup"
         element={
-          <PrivateRoute>
-            <ProfileSetup />
-          </PrivateRoute>
+          user ? <ProfileSetup /> : <Navigate to="/login" />
         }
       />
       <Route
@@ -92,6 +114,20 @@ function AppRoutes() {
             <Layout>
               <Chat />
             </Layout>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/dev"
+        element={
+          <PrivateRoute>
+            {user?.isAdmin ? (
+              <Layout>
+                <DevDashboard />
+              </Layout>
+            ) : (
+              <Navigate to="/" />
+            )}
           </PrivateRoute>
         }
       />

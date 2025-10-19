@@ -1,19 +1,37 @@
-// API Configuration
+// API Configuration for Expo Go
 // Update this based on your environment
 
-// For development:
-// - iOS Simulator: use localhost or 127.0.0.1
-// - Android Emulator: use 10.0.2.2
-// - Physical Device: use your computer's local IP (e.g., 192.168.1.x)
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
-// Current setup for Physical Device
-export const API_URL = __DEV__ 
-  ? 'http://192.168.1.139:3002'  // Your local IP + new port
-  : 'https://your-production-api.com';
+// Automatically detect the correct API URL based on environment
+const getApiUrl = (): string => {
+  if (!__DEV__) {
+    // Production URL
+    return 'https://your-production-api.com';
+  }
 
-// For iOS Simulator, change to: 'http://localhost:3002'
-// For Android Emulator, change to: 'http://10.0.2.2:3002'
+  // Development - Auto-detect based on platform
+  const localhost = Constants.expoConfig?.hostUri?.split(':')[0] || 'localhost';
 
+  if (Platform.OS === 'android') {
+    // Android Emulator uses special IP
+    return 'http://10.0.2.2:3001';
+  }
+
+  if (Platform.OS === 'ios') {
+    // iOS Simulator and physical iOS devices can use localhost or local IP
+    return `http://${localhost}:3001`;
+  }
+
+  // Web fallback
+  return 'http://localhost:3001';
+};
+
+export const API_URL = getApiUrl();
 export const API_BASE_URL = `${API_URL}/api`;
 export const SOCKET_URL = API_URL;
+
+// Manual override for physical devices (uncomment and set your IP if needed)
+export const API_URL = 'http://192.168.68.80:3001';  // Your local IP
 

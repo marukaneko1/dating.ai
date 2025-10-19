@@ -12,6 +12,7 @@ import promptRoutes from './routes/promptRoutes';
 import likeRoutes from './routes/likeRoutes';
 import matchRoutes from './routes/matchRoutes';
 import messageRoutes from './routes/messageRoutes';
+import devRoutes from './routes/devRoutes';
 import { errorHandler } from './middleware/errorHandler';
 import { verifyToken } from './utils/auth';
 import * as messageService from './services/messageService';
@@ -40,6 +41,7 @@ app.use('/api/prompts', promptRoutes);
 app.use('/api/likes', likeRoutes);
 app.use('/api/matches', matchRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/dev', devRoutes); // Developer dashboard routes
 
 // Health check
 app.get('/api/health', (req, res) => {

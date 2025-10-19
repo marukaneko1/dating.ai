@@ -40,10 +40,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const login = async (credentials: LoginCredentials) => {
-    const { token, user: userData } = await api.login(credentials);
-    localStorage.setItem('token', token);
-    setUser(userData);
-    initializeSocket(token);
+    try {
+      console.log('AuthContext: Attempting login with credentials:', credentials);
+      const response = await api.login(credentials);
+      console.log('AuthContext: Login response:', response);
+      const { token, user: userData } = response;
+      localStorage.setItem('token', token);
+      setUser(userData);
+      initializeSocket(token);
+      console.log('AuthContext: Login successful, user set:', userData);
+    } catch (error) {
+      console.error('AuthContext: Login failed:', error);
+      throw error;
+    }
   };
 
   const register = async (data: RegisterData) => {
@@ -53,7 +62,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     initializeSocket(token);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // If NOT admin (regular user), reset their profile
+    if (user && !user.isAdmin) {
+      try {
+        await api.default.post('/profile/reset-user');
+      } catch (error) {
+        console.error('Failed to reset user profile:', error);
+      }
+    }
     localStorage.removeItem('token');
     setUser(null);
     disconnectSocket();

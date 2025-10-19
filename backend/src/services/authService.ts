@@ -46,6 +46,7 @@ export const registerUser = async (data: CreateUserDto) => {
     user: {
       id: user.id,
       email: user.email,
+      isAdmin: user.isAdmin,
       profile: user.profile,
     },
   };
@@ -81,6 +82,7 @@ export const loginUser = async (data: LoginDto) => {
     user: {
       id: user.id,
       email: user.email,
+      isAdmin: user.isAdmin,
       profile: user.profile,
     },
   };
@@ -113,6 +115,7 @@ export const getCurrentUser = async (userId: string) => {
   return {
     id: user.id,
     email: user.email,
+    isAdmin: user.isAdmin,
     profile: user.profile,
   };
 };

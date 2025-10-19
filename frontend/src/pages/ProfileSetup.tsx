@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import * as api from '../services/api';
 import { Prompt } from '../types';
 
@@ -14,6 +15,7 @@ const ProfileSetup = () => {
   const [location, setLocation] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
 
   useEffect(() => {
     loadPrompts();
@@ -59,8 +61,11 @@ const ProfileSetup = () => {
     setLoading(true);
 
     try {
-      // Update profile
-      await api.updateProfile({ bio, location });
+      // Update profile with at least minimal data
+      await api.updateProfile({ 
+        bio: bio || 'New user on Dating.ai', 
+        location: location || 'San Francisco, CA' 
+      });
 
       // Upload photos
       for (let i = 0; i < photos.length; i++) {
@@ -73,6 +78,20 @@ const ProfileSetup = () => {
         await api.addPromptAnswer(prompt.id, answer, i);
       }
 
+      // Refresh user data to update the profile in context
+      await refreshUser();
+      
+      // Generate AI insight in the background (don't wait for it)
+      try {
+        console.log('Generating AI insight...');
+        await api.default.post('/profile/generate-insight');
+        console.log('✅ AI insight generated successfully');
+      } catch (aiError) {
+        console.error('AI insight generation failed (non-blocking):', aiError);
+        // Don't block navigation if AI generation fails
+      }
+      
+      // Navigate to home
       navigate('/');
     } catch (error) {
       console.error('Failed to setup profile', error);
@@ -86,9 +105,26 @@ const ProfileSetup = () => {
     (p) => !selectedPrompts.find((sp) => sp.prompt.id === p.id)
   );
 
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
       <div className="max-w-2xl mx-auto">
+        {/* Logout button */}
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={handleLogout}
+            className="text-gray-500 hover:text-red-600 text-sm font-medium"
+          >
+            Logout
+          </button>
+        </div>
+        
         <div className="bg-white rounded-lg shadow-lg p-8">
           <h1 className="text-3xl font-bold text-center mb-2">
             Complete Your Profile
@@ -140,13 +176,21 @@ const ProfileSetup = () => {
                 )}
               </div>
 
-              <button
-                onClick={() => setStep(2)}
-                disabled={photos.length < 2}
-                className="w-full py-3 bg-primary text-white rounded-lg font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Continue
-              </button>
+              <div className="flex space-x-4">
+                <button
+                  onClick={() => setStep(2)}
+                  className="flex-1 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50"
+                >
+                  Skip for now
+                </button>
+                <button
+                  onClick={() => setStep(2)}
+                  disabled={photos.length < 2}
+                  className="flex-1 py-3 bg-primary text-white rounded-lg font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Continue
+                </button>
+              </div>
             </div>
           )}
 
@@ -193,12 +237,18 @@ const ProfileSetup = () => {
                 </div>
               )}
 
-              <div className="flex space-x-4">
+              <div className="grid grid-cols-3 gap-4">
                 <button
                   onClick={() => setStep(1)}
-                  className="flex-1 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50"
+                  className="py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50"
                 >
                   Back
+                </button>
+                <button
+                  onClick={() => setStep(3)}
+                  className="py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50"
+                >
+                  Skip
                 </button>
                 <button
                   onClick={() => setStep(3)}
@@ -206,7 +256,7 @@ const ProfileSetup = () => {
                     selectedPrompts.length !== 3 ||
                     selectedPrompts.some((sp) => !sp.answer.trim())
                   }
-                  className="flex-1 py-3 bg-primary text-white rounded-lg font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="py-3 bg-primary text-white rounded-lg font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
                 </button>
@@ -244,17 +294,24 @@ const ProfileSetup = () => {
                 />
               </div>
 
-              <div className="flex space-x-4">
+              <div className="grid grid-cols-3 gap-4">
                 <button
                   onClick={() => setStep(2)}
-                  className="flex-1 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50"
+                  className="py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50"
                 >
                   Back
                 </button>
                 <button
                   onClick={handleSubmit}
                   disabled={loading}
-                  className="flex-1 py-3 bg-primary text-white rounded-lg font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 disabled:opacity-50"
+                >
+                  {loading ? 'Saving...' : 'Skip & Finish'}
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="py-3 bg-primary text-white rounded-lg font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Saving...' : 'Complete Setup'}
                 </button>

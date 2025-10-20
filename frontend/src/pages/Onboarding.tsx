@@ -6,6 +6,7 @@ import { Prompt } from '../types';
 
 interface BasicInfo {
   firstName: string;
+  lastName: string;
   birthDate: string;
   gender: string;
   birthCity: string;
@@ -19,6 +20,7 @@ const Onboarding = () => {
   const [currentAnswer, setCurrentAnswer] = useState('');
   const [basicInfo, setBasicInfo] = useState<BasicInfo>({
     firstName: '',
+    lastName: '',
     birthDate: '',
     gender: '',
     birthCity: '',
@@ -53,8 +55,8 @@ const Onboarding = () => {
 
   const handleBasicInfoNext = () => {
     // Validate basic info
-    if (!basicInfo.firstName.trim() || !basicInfo.birthDate || !basicInfo.gender || !basicInfo.birthCity.trim()) {
-      alert('Please fill in all required fields (Name, Birthday, Gender, Birth City)');
+    if (!basicInfo.firstName.trim() || !basicInfo.lastName.trim() || !basicInfo.birthDate || !basicInfo.gender || !basicInfo.birthCity.trim()) {
+      alert('Please fill in all required fields (First Name, Last Name, Birthday, Gender, Birth City)');
       return;
     }
     setStep(1); // Move to first question
@@ -113,10 +115,11 @@ const Onboarding = () => {
       }
 
       // Create profile with basic info
-      const bioText = `Born in ${basicInfo.birthCity}${basicInfo.birthTime ? ` at ${basicInfo.birthTime}` : ''}. New on Dating.ai`;
+      const fullName = `${basicInfo.firstName} ${basicInfo.lastName}`;
+      const bioText = `${fullName}. Born in ${basicInfo.birthCity}${basicInfo.birthTime ? ` at ${basicInfo.birthTime}` : ''}. New on Dating.ai`;
       
       await api.updateProfile({
-        firstName: basicInfo.firstName,
+        firstName: fullName,
         age: age,
         gender: basicInfo.gender,
         bio: bioText,
@@ -159,6 +162,15 @@ const Onboarding = () => {
         console.log('✅ AI insight generated');
       } catch (aiError) {
         console.error('AI insight failed (non-blocking):', aiError);
+      }
+
+      // Export to CSV (non-blocking)
+      try {
+        console.log('Exporting user data to CSV...');
+        const exportResponse = await api.default.post('/profile/export-csv');
+        console.log('✅ Data exported to CSV:', exportResponse.data);
+      } catch (csvError) {
+        console.error('CSV export failed (non-blocking):', csvError);
       }
 
       // Navigate to home
@@ -244,7 +256,7 @@ const Onboarding = () => {
             <h2 className="text-2xl font-semibold text-gray-900 mb-6">Basic Information</h2>
             
             <div className="space-y-6">
-              {/* Name */}
+              {/* First Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   First Name *
@@ -256,6 +268,20 @@ const Onboarding = () => {
                   placeholder="Your first name"
                   className="w-full p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                   autoFocus
+                />
+              </div>
+
+              {/* Last Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Last Name *
+                </label>
+                <input
+                  type="text"
+                  value={basicInfo.lastName}
+                  onChange={(e) => setBasicInfo({ ...basicInfo, lastName: e.target.value })}
+                  placeholder="Your last name"
+                  className="w-full p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
               </div>
 
@@ -369,7 +395,7 @@ const Onboarding = () => {
           <button
             onClick={handleNext}
             disabled={
-              (step === 0 && (!basicInfo.firstName || !basicInfo.birthDate || !basicInfo.gender || !basicInfo.birthCity)) ||
+              (step === 0 && (!basicInfo.firstName || !basicInfo.lastName || !basicInfo.birthDate || !basicInfo.gender || !basicInfo.birthCity)) ||
               (step > 0 && !currentAnswer.trim()) ||
               submitting
             }

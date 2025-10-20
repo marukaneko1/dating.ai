@@ -106,3 +106,17 @@ export const resetUserProfile = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const exportToCSV = async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await profileService.exportProfileAfterOnboarding(req.userId!);
+    if (result) {
+      res.json({ message: 'Data exported to CSV', filename: result.filename });
+    } else {
+      res.json({ message: 'Export skipped (admin or no data)' });
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Export failed';
+    res.status(500).json({ error: message });
+  }
+};
+

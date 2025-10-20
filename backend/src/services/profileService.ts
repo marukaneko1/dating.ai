@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { UpdateProfileDto, CreatePromptAnswerDto } from '../types';
 import { LIMITS } from '../config/constants';
 import { generateProfileInsight } from './openaiService';
+import { exportUserToCSV } from './csvExportService';
 
 const prisma = new PrismaClient();
 
@@ -319,4 +320,42 @@ export const resetUserProfile = async (userId: string) => {
   }
 
   return { message: 'User profile reset successfully' };
+};
+
+// Export profile to CSV after onboarding completion
+export const exportProfileAfterOnboarding = async (userId: string) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { profile: true },
+    });
+
+    // Only export for non-admin users (real users)
+    if (!user || user.isAdmin) {
+      console.log('Skipping CSV export for admin user');
+      return null;
+    }
+
+    // Check if profile has at least some prompt answers
+    const profile = await prisma.profile.findUnique({
+      where: { userId },
+      include: {
+        promptAnswers: true,
+      },
+    });
+
+    if (!profile || profile.promptAnswers.length === 0) {
+      console.log('No prompt answers yet, skipping CSV export');
+      return null;
+    }
+
+    // Export to CSV
+    const result = await exportUserToCSV(userId);
+    console.log(`✅ User data exported to CSV: ${result.filename}`);
+    return result;
+  } catch (error) {
+    console.error('Failed to export user to CSV:', error);
+    // Don't throw - this is a non-critical feature
+    return null;
+  }
 };

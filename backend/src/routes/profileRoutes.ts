@@ -26,5 +26,8 @@ router.post('/generate-insight', authenticate, profileController.generateAIInsig
 // Reset user profile endpoint
 router.post('/reset-user', authenticate, profileController.resetUserProfile);
 
+// Export profile to CSV endpoint
+router.post('/export-csv', authenticate, profileController.exportToCSV);
+
 export default router;
 

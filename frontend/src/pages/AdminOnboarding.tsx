@@ -6,6 +6,7 @@ import { Prompt } from '../types';
 
 interface BasicInfo {
   firstName: string;
+  lastName: string;
   birthDate: string;
   gender: string;
   birthCity: string;
@@ -18,6 +19,7 @@ const AdminOnboarding = () => {
   const [currentAnswer, setCurrentAnswer] = useState('');
   const [basicInfo, setBasicInfo] = useState<BasicInfo>({
     firstName: '',
+    lastName: '',
     birthDate: '',
     gender: '',
     birthCity: '',
@@ -163,6 +165,19 @@ const AdminOnboarding = () => {
                   placeholder="Your first name (preview only)"
                   className="w-full p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                   autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Last Name
+                </label>
+                <input
+                  type="text"
+                  value={basicInfo.lastName}
+                  onChange={(e) => setBasicInfo({ ...basicInfo, lastName: e.target.value })}
+                  placeholder="Your last name (preview only)"
+                  className="w-full p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
               </div>
 

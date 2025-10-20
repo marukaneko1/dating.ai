@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Message } from '../types';
+import { Message, Match } from '../types';
 import * as api from '../services/api';
 import { getSocket } from '../services/socket';
 import { useAuth } from '../contexts/AuthContext';
@@ -10,14 +10,17 @@ const Chat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [matchInfo, setMatchInfo] = useState<Match | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
   useEffect(() => {
     if (!matchId) return;
 
     loadMessages();
+    loadMatchInfo();
 
     const socket = getSocket();
     if (socket) {
@@ -55,6 +58,18 @@ const Chat = () => {
     }
   };
 
+  const loadMatchInfo = async () => {
+    try {
+      const matches = await api.getMatches();
+      const match = matches.find((m) => m.id === matchId);
+      if (match) {
+        setMatchInfo(match);
+      }
+    } catch (error) {
+      console.error('Failed to load match info', error);
+    }
+  };
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -83,25 +98,53 @@ const Chat = () => {
     );
   }
 
-  const otherUser =
-    messages.length > 0
-      ? messages.find((m) => m.senderId !== user?.id)?.sender
-      : null;
+  const otherUser = matchInfo?.user || (messages.length > 0
+    ? messages.find((m) => m.senderId !== user?.id)?.sender
+    : null);
 
   return (
     <div className="max-w-4xl mx-auto">
       <div className="bg-white rounded-lg shadow-lg overflow-hidden flex flex-col h-[calc(100vh-12rem)]">
-        {/* Header */}
+        {/* Header with Profile Info */}
         <div className="bg-primary text-white p-4 flex items-center">
           <button
-            onClick={() => navigate('/matches')}
-            className="mr-4 hover:opacity-80"
+            onClick={() => navigate('/messages')}
+            className="mr-4 hover:opacity-80 transition-opacity"
           >
-            ← Back
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
           </button>
-          <h2 className="text-xl font-semibold">
-            {otherUser?.profile?.firstName || 'Match'}
-          </h2>
+          
+          {otherUser && (
+            <div className="flex items-center space-x-3 flex-1">
+              {otherUser.profile?.photos && otherUser.profile.photos.length > 0 ? (
+                <img
+                  src={`${API_URL}${otherUser.profile.photos[0].url}`}
+                  alt={otherUser.profile.firstName}
+                  className="w-10 h-10 rounded-full object-cover border-2 border-white"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-lg font-semibold">
+                  {otherUser.profile?.firstName?.charAt(0) || '?'}
+                </div>
+              )}
+              <div>
+                <h2 className="text-xl font-semibold">
+                  {otherUser.profile?.firstName || 'Match'}
+                </h2>
+                {otherUser.profile?.age && (
+                  <p className="text-sm text-red-100">
+                    {otherUser.profile.age} years old
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {!otherUser && (
+            <h2 className="text-xl font-semibold">Chat</h2>
+          )}
         </div>
 
         {/* Messages */}

@@ -6,7 +6,6 @@ import ProfileSetup from './pages/ProfileSetup';
 import Onboarding from './pages/Onboarding';
 import AdminOnboarding from './pages/AdminOnboarding';
 import Discover from './pages/Discover';
-import Matches from './pages/Matches';
 import Messages from './pages/Messages';
 import Chat from './pages/Chat';
 import Profile from './pages/Profile';
@@ -84,16 +83,6 @@ function AppRoutes() {
           <PrivateRoute>
             <Layout>
               <Profile />
-            </Layout>
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/matches"
-        element={
-          <PrivateRoute>
-            <Layout>
-              <Matches />
             </Layout>
           </PrivateRoute>
         }

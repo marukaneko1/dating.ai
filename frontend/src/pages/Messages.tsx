@@ -154,17 +154,6 @@ const Messages = () => {
         )}
       </div>
 
-      {/* Quick Actions */}
-      {matches.length > 0 && (
-        <div className="mt-6 text-center">
-          <button
-            onClick={() => navigate('/matches')}
-            className="text-primary hover:text-red-600 font-medium"
-          >
-            View All Matches →
-          </button>
-        </div>
-      )}
     </div>
   );
 };

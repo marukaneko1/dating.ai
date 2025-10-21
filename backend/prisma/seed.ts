@@ -4,14 +4,129 @@ import bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 const prompts = [
-  // Meaningful & Deep Questions (Your custom questions)
-  { text: "What brings you genuine peace or fulfillment in life?", category: 'meaningful' },
-  { text: "When you're stressed or upset, how do you usually respond?", category: 'meaningful' },
-  { text: "What three things make you feel most loved or appreciated?", category: 'meaningful' },
-  { text: "What's something you've learned about yourself from past relationships?", category: 'meaningful' },
-  { text: "What are the top three qualities you look for in a partner?", category: 'meaningful' },
-  { text: "What's a fear or challenge you're working on overcoming?", category: 'meaningful' },
-  { text: "What does a truly meaningful relationship look like to you?", category: 'meaningful' },
+  // User Self-Assessment Questions (True/False)
+  { 
+    text: "I need alone time to recharge and feel at peace", 
+    category: 'user_self',
+    type: 'true_false',
+    options: JSON.stringify(['True', 'False'])
+  },
+  { 
+    text: "I prefer to talk through problems immediately rather than taking time to process", 
+    category: 'user_self',
+    type: 'true_false',
+    options: JSON.stringify(['True', 'False'])
+  },
+  { 
+    text: "Physical touch and affection are essential for me to feel loved", 
+    category: 'user_self',
+    type: 'true_false',
+    options: JSON.stringify(['True', 'False'])
+  },
+  { 
+    text: "I've learned that I need a partner who gives me space to grow independently", 
+    category: 'user_self',
+    type: 'true_false',
+    options: JSON.stringify(['True', 'False'])
+  },
+  { 
+    text: "I believe confronting fears together makes a relationship stronger", 
+    category: 'user_self',
+    type: 'true_false',
+    options: JSON.stringify(['True', 'False'])
+  },
+  
+  // Partner Preference Questions (Multiple Choice, Multiple Selection)
+  { 
+    text: "What qualities are most important in a partner? (Select all that apply)", 
+    category: 'partner_preference',
+    type: 'multiple_choice',
+    options: JSON.stringify([
+      'Emotional intelligence',
+      'Sense of humor',
+      'Ambition and drive',
+      'Kindness and empathy',
+      'Physical affection',
+      'Good communication',
+      'Adventurous spirit',
+      'Stability and reliability'
+    ])
+  },
+  { 
+    text: "How do you want your partner to handle conflict? (Select all that apply)", 
+    category: 'partner_preference',
+    type: 'multiple_choice',
+    options: JSON.stringify([
+      'Address issues immediately',
+      'Take time to cool down first',
+      'Listen actively without interrupting',
+      'Validate my feelings',
+      'Work together to find solutions',
+      'Be willing to compromise',
+      'Stay calm and respectful',
+      'Follow up after resolving issues'
+    ])
+  },
+  { 
+    text: "What ways of showing love resonate with you most? (Select all that apply)", 
+    category: 'partner_preference',
+    type: 'multiple_choice',
+    options: JSON.stringify([
+      'Words of affirmation',
+      'Quality time together',
+      'Physical touch',
+      'Acts of service',
+      'Thoughtful gifts',
+      'Active listening',
+      'Planning surprises',
+      'Supporting my goals'
+    ])
+  },
+  { 
+    text: "What relationship dynamics are important to you? (Select all that apply)", 
+    category: 'partner_preference',
+    type: 'multiple_choice',
+    options: JSON.stringify([
+      'Deep emotional connection',
+      'Maintaining independence',
+      'Sharing vulnerabilities',
+      'Growing together',
+      'Having separate interests',
+      'Being best friends',
+      'Mutual respect',
+      'Supporting each other\'s dreams'
+    ])
+  },
+  { 
+    text: "What are deal-breakers or concerns in a relationship? (Select all that apply)", 
+    category: 'partner_preference',
+    type: 'multiple_choice',
+    options: JSON.stringify([
+      'Lack of emotional availability',
+      'Poor communication',
+      'Dishonesty',
+      'Not respecting boundaries',
+      'Different life goals',
+      'Lack of effort',
+      'Avoiding difficult conversations',
+      'Not supporting personal growth'
+    ])
+  },
+  { 
+    text: "What does a meaningful relationship look like to you? (Select all that apply)", 
+    category: 'partner_preference',
+    type: 'multiple_choice',
+    options: JSON.stringify([
+      'Two independent people choosing each other',
+      'Constant communication and togetherness',
+      'Safe space for vulnerability',
+      'Supporting each other\'s growth',
+      'Shared values and goals',
+      'Deep friendship and romance',
+      'Honest and direct communication',
+      'Balancing individuality and partnership'
+    ])
+  },
   
   // Fun prompts
   { text: "I'm weirdly attracted to...", category: 'fun' },

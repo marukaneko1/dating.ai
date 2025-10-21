@@ -35,6 +35,8 @@ export interface Prompt {
   id: string;
   text: string;
   category?: string;
+  type?: string; // "text", "true_false", "multiple_choice"
+  options?: string; // JSON string of options
   active: boolean;
 }
 

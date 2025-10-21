@@ -71,7 +71,9 @@ model Photo {
 model Prompt {
   id       String   @id @default(uuid())
   text     String   @unique
-  category String? // "fun", "deep", "lifestyle", etc.
+  category String? // "fun", "deep", "lifestyle", "user_self", "partner_preference", etc.
+  type     String?  @default("text") // "text", "true_false", "multiple_choice"
+  options  String?  @db.Text // JSON string of options for multiple choice questions
   active   Boolean  @default(true)
 
   answers  PromptAnswer[]

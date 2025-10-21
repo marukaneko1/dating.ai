@@ -14,10 +14,10 @@ interface BasicInfo {
 }
 
 const Onboarding = () => {
-  const [step, setStep] = useState(0); // 0 = basic info, 1-7 = questions
+  const [step, setStep] = useState(0); // 0 = basic info, 1-11 = questions (5 user_self + 6 partner_preference)
   const [questions, setQuestions] = useState<Prompt[]>([]);
   const [answers, setAnswers] = useState<{ promptId: string; answer: string }[]>([]);
-  const [currentAnswer, setCurrentAnswer] = useState('');
+  const [currentAnswer, setCurrentAnswer] = useState<string | string[]>('');
   const [basicInfo, setBasicInfo] = useState<BasicInfo>({
     firstName: '',
     lastName: '',
@@ -37,15 +37,16 @@ const Onboarding = () => {
   };
 
   useEffect(() => {
-    loadMeaningfulQuestions();
+    loadQuestions();
   }, []);
 
-  const loadMeaningfulQuestions = async () => {
+  const loadQuestions = async () => {
     try {
       const allPrompts = await api.getPrompts();
-      // Filter for meaningful category questions only
-      const meaningfulQuestions = allPrompts.filter(p => p.category === 'meaningful');
-      setQuestions(meaningfulQuestions);
+      // Get user_self and partner_preference questions
+      const userSelfQuestions = allPrompts.filter(p => p.category === 'user_self');
+      const partnerPrefQuestions = allPrompts.filter(p => p.category === 'partner_preference');
+      setQuestions([...userSelfQuestions, ...partnerPrefQuestions]);
       setLoading(false);
     } catch (error) {
       console.error('Failed to load questions', error);
@@ -54,12 +55,11 @@ const Onboarding = () => {
   };
 
   const handleBasicInfoNext = () => {
-    // Validate basic info
     if (!basicInfo.firstName.trim() || !basicInfo.lastName.trim() || !basicInfo.birthDate || !basicInfo.gender || !basicInfo.birthCity.trim()) {
       alert('Please fill in all required fields (First Name, Last Name, Birthday, Gender, Birth City)');
       return;
     }
-    setStep(1); // Move to first question
+    setStep(1);
   };
 
   const handleNext = () => {
@@ -68,34 +68,52 @@ const Onboarding = () => {
       return;
     }
 
-    if (currentAnswer.trim()) {
-      const questionIndex = step - 1;
-      
-      // Save current answer
-      setAnswers([
-        ...answers,
-        { promptId: questions[questionIndex].id, answer: currentAnswer }
-      ]);
-      setCurrentAnswer('');
+    const questionIndex = step - 1;
+    const currentQuestion = questions[questionIndex];
 
-      // Move to next question or submit
-      if (step < questions.length) {
-        setStep(step + 1);
-      } else {
-        // All questions answered, submit
-        handleSubmit();
+    // Validate answer based on question type
+    if (currentQuestion.type === 'multiple_choice') {
+      if (Array.isArray(currentAnswer) && currentAnswer.length === 0) {
+        alert('Please select at least one option');
+        return;
       }
+    } else if (currentQuestion.type === 'true_false') {
+      if (!currentAnswer) {
+        alert('Please select True or False');
+        return;
+      }
+    }
+
+    // Save current answer
+    const answerString = Array.isArray(currentAnswer) 
+      ? JSON.stringify(currentAnswer) 
+      : currentAnswer;
+
+    setAnswers([
+      ...answers,
+      { promptId: currentQuestion.id, answer: answerString }
+    ]);
+    setCurrentAnswer(currentQuestion.type === 'multiple_choice' ? [] : '');
+
+    // Move to next question or submit
+    if (step < questions.length) {
+      setStep(step + 1);
+    } else {
+      handleSubmit();
     }
   };
 
   const handleBack = () => {
     if (step === 1) {
-      // Go back to basic info
       setStep(0);
     } else if (step > 1) {
-      // Go back to previous question
       const previousAnswer = answers[answers.length - 1];
-      setCurrentAnswer(previousAnswer.answer);
+      try {
+        const parsed = JSON.parse(previousAnswer.answer);
+        setCurrentAnswer(Array.isArray(parsed) ? parsed : previousAnswer.answer);
+      } catch {
+        setCurrentAnswer(previousAnswer.answer);
+      }
       setAnswers(answers.slice(0, -1));
       setStep(step - 1);
     }
@@ -103,189 +121,132 @@ const Onboarding = () => {
 
   const handleSubmit = async () => {
     setSubmitting(true);
-
     try {
-      // Calculate age from birth date
-      const birthDateObj = new Date(basicInfo.birthDate);
+      // Calculate age
+      const birthDate = new Date(basicInfo.birthDate);
       const today = new Date();
-      let age = today.getFullYear() - birthDateObj.getFullYear();
-      const monthDiff = today.getMonth() - birthDateObj.getMonth();
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDateObj.getDate())) {
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
         age--;
       }
 
-      // Create profile with basic info
+      // Create profile with full name
       const fullName = `${basicInfo.firstName} ${basicInfo.lastName}`;
-      const bioText = `${fullName}. Born in ${basicInfo.birthCity}${basicInfo.birthTime ? ` at ${basicInfo.birthTime}` : ''}. New on Dating.ai`;
-      
       await api.updateProfile({
         firstName: fullName,
-        age: age,
+        age,
         gender: basicInfo.gender,
-        bio: bioText,
+        bio: `From ${basicInfo.birthCity}. Born ${basicInfo.birthTime ? `at ${basicInfo.birthTime}` : 'under the stars'}.`,
         location: basicInfo.birthCity,
-        interestedIn: basicInfo.gender === 'male' ? ['female'] : basicInfo.gender === 'female' ? ['male'] : ['male', 'female', 'non-binary'],
       });
 
-      // Submit all prompt answers (last answer already saved in answers array)
-      const allAnswers = answers;
-
-      // Delete existing prompt answers first (in case re-doing)
-      try {
-        const profile = await api.getProfile();
-        if (profile.promptAnswers && profile.promptAnswers.length > 0) {
-          for (const pa of profile.promptAnswers) {
-            try {
-              await api.deletePromptAnswer(pa.id);
-            } catch (deleteErr) {
-              console.error('Error deleting prompt answer:', deleteErr);
-            }
-          }
-        }
-      } catch (err) {
-        // No existing profile, that's fine
-        console.log('No existing profile to clean up');
+      // Save all answers
+      for (const answer of answers) {
+        await api.addPromptAnswer(answer.promptId, answer.answer);
       }
 
-      // Add new prompt answers
-      for (let i = 0; i < allAnswers.length; i++) {
-        await api.addPromptAnswer(allAnswers[i].promptId, allAnswers[i].answer, i);
-      }
-
-      // Refresh user data
-      await refreshUser();
-
-      // Generate AI insight in the background
-      try {
-        console.log('Generating AI insight...');
-        await api.default.post('/profile/generate-insight');
-        console.log('✅ AI insight generated');
-      } catch (aiError) {
-        console.error('AI insight failed (non-blocking):', aiError);
-      }
+      // Generate AI insight (non-blocking)
+      api.default.post('/profile/generate-insight').catch(err => 
+        console.log('AI insight generation queued:', err)
+      );
 
       // Export to CSV (non-blocking)
-      try {
-        console.log('Exporting user data to CSV...');
-        const exportResponse = await api.default.post('/profile/export-csv');
-        console.log('✅ Data exported to CSV:', exportResponse.data);
-      } catch (csvError) {
-        console.error('CSV export failed (non-blocking):', csvError);
-      }
+      api.default.post('/profile/export-csv').catch(err => 
+        console.log('CSV export queued:', err)
+      );
 
-      // Navigate to home
+      await refreshUser();
       navigate('/');
     } catch (error) {
-      console.error('Failed to submit answers', error);
-      alert('Failed to save your answers. Please try again.');
+      console.error('Failed to complete onboarding', error);
+      alert('Failed to setup profile. Please try again.');
+    } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleMultipleChoiceToggle = (option: string) => {
+    const currentSelections = Array.isArray(currentAnswer) ? currentAnswer : [];
+    if (currentSelections.includes(option)) {
+      setCurrentAnswer(currentSelections.filter(o => o !== option));
+    } else {
+      setCurrentAnswer([...currentSelections, option]);
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-xl">Loading questions...</div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-xl text-gray-600">Loading questions...</div>
       </div>
     );
   }
 
-  if (questions.length === 0) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-xl text-red-600 mb-4">No questions found</p>
-          <button
-            onClick={() => navigate('/')}
-            className="px-6 py-2 bg-primary text-white rounded-lg"
-          >
-            Go Home
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const totalSteps = questions.length + 1; // Basic info + 7 questions
+  const totalSteps = questions.length + 1; // +1 for basic info
   const progress = (step / totalSteps) * 100;
-  const currentQ = step > 0 ? questions[step - 1] : null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-50 py-8 px-4">
       <div className="max-w-2xl mx-auto">
-        {/* Logout button */}
-        <div className="flex justify-end mb-4">
-          <button
-            onClick={handleLogout}
-            className="text-gray-500 hover:text-red-600 text-sm font-medium underline"
-          >
-            Logout
-          </button>
-        </div>
-
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {step === 0 ? 'Welcome to Dating.ai' : 'Tell Us About Yourself'}
-          </h1>
-          <p className="text-gray-600">
-            {step === 0 ? 'Let\'s start with the basics' : `Question ${step} of ${questions.length}`}
-          </p>
+          <h1 className="text-4xl font-bold text-primary mb-2">Welcome to Dating.ai</h1>
+          <p className="text-gray-600">Let's get to know you better</p>
         </div>
 
         {/* Progress Bar */}
         <div className="mb-8">
-          <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm font-medium text-gray-700">
+              Step {step + 1} of {totalSteps}
+            </span>
+            <span className="text-sm text-gray-500">
+              {Math.round(progress)}% complete
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-3">
             <div
-              className="bg-gradient-to-r from-primary via-purple-500 to-pink-500 h-3 rounded-full transition-all duration-500 ease-out"
+              className="bg-primary h-3 rounded-full transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="text-sm text-gray-600 mt-2 text-center">
-            {step === 0
-              ? `${questions.length} meaningful questions ahead`
-              : totalSteps - step === 1
-              ? 'Last question!'
-              : `${totalSteps - step} more ${totalSteps - step === 1 ? 'step' : 'steps'}`}
-          </p>
         </div>
 
-        {/* Basic Info Form (Step 0) */}
-        {step === 0 && (
-          <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-6">Basic Information</h2>
-            
+        {/* Content Card */}
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          {/* Basic Info Step */}
+          {step === 0 && (
             <div className="space-y-6">
-              {/* First Name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  First Name *
-                </label>
-                <input
-                  type="text"
-                  value={basicInfo.firstName}
-                  onChange={(e) => setBasicInfo({ ...basicInfo, firstName: e.target.value })}
-                  placeholder="Your first name"
-                  className="w-full p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  autoFocus
-                />
+              <h2 className="text-2xl font-bold text-gray-800 mb-6">Basic Information</h2>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    First Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={basicInfo.firstName}
+                    onChange={(e) => setBasicInfo({...basicInfo, firstName: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="John"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Last Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={basicInfo.lastName}
+                    onChange={(e) => setBasicInfo({...basicInfo, lastName: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="Doe"
+                  />
+                </div>
               </div>
 
-              {/* Last Name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Last Name *
-                </label>
-                <input
-                  type="text"
-                  value={basicInfo.lastName}
-                  onChange={(e) => setBasicInfo({ ...basicInfo, lastName: e.target.value })}
-                  placeholder="Your last name"
-                  className="w-full p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                />
-              </div>
-
-              {/* Birthday */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Birthday *
@@ -293,122 +254,158 @@ const Onboarding = () => {
                 <input
                   type="date"
                   value={basicInfo.birthDate}
-                  onChange={(e) => setBasicInfo({ ...basicInfo, birthDate: e.target.value })}
-                  className="w-full p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  onChange={(e) => setBasicInfo({...basicInfo, birthDate: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
               </div>
 
-              {/* Gender */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Gender *
                 </label>
-                <div className="grid grid-cols-2 gap-3">
-                  {['male', 'female', 'non-binary', 'other'].map((gender) => (
-                    <button
-                      key={gender}
-                      type="button"
-                      onClick={() => setBasicInfo({ ...basicInfo, gender })}
-                      className={`p-4 border-2 rounded-xl font-medium capitalize transition-all ${
-                        basicInfo.gender === gender
-                          ? 'border-primary bg-red-50 text-primary'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      {gender}
-                    </button>
-                  ))}
-                </div>
+                <select
+                  value={basicInfo.gender}
+                  onChange={(e) => setBasicInfo({...basicInfo, gender: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                >
+                  <option value="">Select gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="non-binary">Non-binary</option>
+                  <option value="other">Other</option>
+                </select>
               </div>
 
-              {/* Birth City */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  City You Were Born *
+                  Birth City *
                 </label>
                 <input
                   type="text"
                   value={basicInfo.birthCity}
-                  onChange={(e) => setBasicInfo({ ...basicInfo, birthCity: e.target.value })}
-                  placeholder="e.g., San Francisco, CA"
-                  className="w-full p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  onChange={(e) => setBasicInfo({...basicInfo, birthCity: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="New York"
                 />
               </div>
 
-              {/* Birth Time (Optional) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Time You Were Born (Optional)
+                  Birth Time (Optional)
                 </label>
                 <input
                   type="time"
                   value={basicInfo.birthTime}
-                  onChange={(e) => setBasicInfo({ ...basicInfo, birthTime: e.target.value })}
-                  className="w-full p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  onChange={(e) => setBasicInfo({...basicInfo, birthTime: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
-                <p className="text-xs text-gray-500 mt-2">
-                  If you know it, this helps with astrological insights
-                </p>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Question Card (Steps 1-7) */}
-        {step > 0 && currentQ && (
-          <div className="bg-white rounded-2xl shadow-xl p-8 mb-6 transform transition-all duration-300">
-            <div className="mb-6">
-              <span className="inline-block px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium mb-4">
-                {currentQ.category}
-              </span>
-              <h2 className="text-2xl font-semibold text-gray-900 leading-relaxed">
-                {currentQ.text}
-              </h2>
+          {/* Question Steps */}
+          {step > 0 && step <= questions.length && (
+            <div className="space-y-6">
+              {questions[step - 1] && (
+                <>
+                  <div className="mb-6">
+                    <div className="inline-block px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium mb-4">
+                      {questions[step - 1].category === 'user_self' ? 'About You' : 'About Your Ideal Partner'}
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-800">
+                      {questions[step - 1].text}
+                    </h2>
+                  </div>
+
+                  {/* True/False Questions */}
+                  {questions[step - 1].type === 'true_false' && (
+                    <div className="space-y-3">
+                      {['True', 'False'].map((option) => (
+                        <button
+                          key={option}
+                          onClick={() => setCurrentAnswer(option)}
+                          className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
+                            currentAnswer === option
+                              ? 'border-primary bg-primary/10 text-primary font-medium'
+                              : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                          }`}
+                        >
+                          <div className="flex items-center">
+                            <div className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
+                              currentAnswer === option ? 'border-primary' : 'border-gray-300'
+                            }`}>
+                              {currentAnswer === option && (
+                                <div className="w-3 h-3 rounded-full bg-primary" />
+                              )}
+                            </div>
+                            {option}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Multiple Choice Questions */}
+                  {questions[step - 1].type === 'multiple_choice' && questions[step - 1].options && (
+                    <div className="space-y-3">
+                      <p className="text-sm text-gray-600 mb-4">Select all that apply</p>
+                      {JSON.parse(questions[step - 1].options!).map((option: string) => {
+                        const isSelected = Array.isArray(currentAnswer) && currentAnswer.includes(option);
+                        return (
+                          <button
+                            key={option}
+                            onClick={() => handleMultipleChoiceToggle(option)}
+                            className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
+                              isSelected
+                                ? 'border-primary bg-primary/10 text-primary font-medium'
+                                : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                            }`}
+                          >
+                            <div className="flex items-center">
+                              <div className={`w-5 h-5 rounded border-2 mr-3 flex items-center justify-center ${
+                                isSelected ? 'border-primary bg-primary' : 'border-gray-300'
+                              }`}>
+                                {isSelected && (
+                                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                )}
+                              </div>
+                              {option}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
+          )}
 
-            <textarea
-              value={currentAnswer}
-              onChange={(e) => setCurrentAnswer(e.target.value)}
-              placeholder="Share your thoughts..."
-              className="w-full p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none transition-all"
-              rows={6}
-              autoFocus
-            />
-
-            <p className="text-sm text-gray-500 mt-2">
-              {currentAnswer.length} characters
-            </p>
-          </div>
-        )}
-
-        {/* Navigation Buttons */}
-        <div className="flex gap-4">
-          {step > 0 && (
+          {/* Navigation Buttons */}
+          <div className="flex justify-between mt-8 pt-6 border-t">
             <button
               onClick={handleBack}
-              disabled={submitting}
-              className="flex-1 py-4 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
+              disabled={step === 0}
+              className="px-6 py-3 text-gray-600 hover:text-gray-800 font-medium disabled:opacity-0 disabled:cursor-default transition-opacity"
             >
               ← Back
             </button>
-          )}
-          <button
-            onClick={handleNext}
-            disabled={
-              (step === 0 && (!basicInfo.firstName || !basicInfo.lastName || !basicInfo.birthDate || !basicInfo.gender || !basicInfo.birthCity)) ||
-              (step > 0 && !currentAnswer.trim()) ||
-              submitting
-            }
-            className="flex-1 py-4 bg-gradient-to-r from-primary to-pink-500 text-white rounded-xl font-semibold hover:shadow-lg transform hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-          >
-            {submitting
-              ? 'Saving...'
-              : step === 0
-              ? 'Start Questions →'
-              : step === questions.length
-              ? '✨ Complete Profile'
-              : 'Next →'}
-          </button>
+            <button
+              onClick={handleLogout}
+              className="px-6 py-3 text-gray-500 hover:text-red-600 font-medium transition-colors"
+            >
+              Logout
+            </button>
+            <button
+              onClick={handleNext}
+              disabled={submitting || (step === 0 && (!basicInfo.firstName || !basicInfo.lastName || !basicInfo.birthDate || !basicInfo.gender || !basicInfo.birthCity))}
+              className="px-8 py-3 bg-primary text-white rounded-full font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {submitting ? 'Saving...' : step === questions.length ? 'Complete' : 'Next →'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -416,4 +413,3 @@ const Onboarding = () => {
 };
 
 export default Onboarding;
-
